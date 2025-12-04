@@ -13,7 +13,9 @@ fn wrap(mut current: i32) -> i32 {
     current % 100
 }
 
-fn find_password(lines: impl Iterator<Item = std::io::Result<String>>) -> Result<i64, Box<dyn std::error::Error>> {
+fn find_password(
+    lines: impl Iterator<Item = std::io::Result<String>>,
+) -> Result<i64, Box<dyn std::error::Error>> {
     let mut current = 50;
     let mut count = 0;
 
@@ -67,7 +69,8 @@ L1
 L99
 R14
 L82
-        "#.trim();
+        "#
+        .trim();
 
         let lines = input.lines().map(|line| Ok(line.to_owned()));
         assert_eq!(find_password(lines).expect("never fails"), 3);
