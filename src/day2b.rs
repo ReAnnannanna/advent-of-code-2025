@@ -16,17 +16,29 @@ fn parse_input(input: &str) -> impl Iterator<Item = Range> {
     })
 }
 
-fn is_valid_id(id: i64) -> bool {
-    let id = id.to_string();
-    // Chunk the ID up in slices of digits up to size len/2,
-    for n in 1..=id.len() / 2 {
-        let mut iter = id.as_bytes().chunks_exact(n);
-        let Some(first) = iter.next() else {
-            break;
-        };
+/// Returns true if the `id` in base 10 is a sequence of `digits` repeating.
+fn is_repeating(mut id: i64, digits: i64, pow: i64) -> bool {
+    if pow > id {
+        return false;
+    }
 
-        // and check if all chunks are equal, indicating a repeating number
-        if iter.all(|other| other == first) && iter.remainder().is_empty() {
+    while id > 0 {
+        if id % pow != digits {
+            return false;
+        }
+
+        id /= pow;
+    }
+
+    true
+}
+
+fn is_valid_id(id: i64) -> bool {
+    let ndigits = id.ilog10() + 1;
+    for n in 1..=ndigits / 2 {
+        // Take a `chunk` from the left;
+        let chunk = id / 10i64.pow(ndigits - n);
+        if is_repeating(id, chunk, 10i64.pow(n)) {
             return false;
         }
     }
@@ -45,7 +57,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::io::stdin().read_to_string(&mut input)?;
 
     let invalid_id_sum = sum_invalid_ids(input.trim());
-
     println!("{invalid_id_sum}");
 
     Ok(())
@@ -78,6 +89,15 @@ mod tests {
     }
 
     #[test]
+    fn test_repeating() {
+        assert!(!is_repeating(1, 1, 10));
+        assert!(is_repeating(11111, 1, 10));
+        assert!(!is_repeating(121212, 1, 10));
+        assert!(is_repeating(121212, 12, 100));
+        assert!(is_repeating(824824824, 824, 1000));
+    }
+
+    #[test]
     fn test_valid_id() {
         assert!(is_valid_id(1));
         assert!(is_valid_id(4));
@@ -86,6 +106,7 @@ mod tests {
         assert!(is_valid_id(131212));
         assert!(is_valid_id(12121));
         assert!(!is_valid_id(11111));
+        assert!(is_valid_id(40404));
         assert!(!is_valid_id(38593859));
         assert!(!is_valid_id(1188511885));
         assert!(is_valid_id(188511885));
