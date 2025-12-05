@@ -90,3 +90,34 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod benches {
+    use super::is_valid_id;
+
+    #[test]
+    #[ignore = "int_method ~8x faster than string_method"]
+    fn perf() {
+        let int_method = std::time::Instant::now();
+        for i in 1..10_000_000 {
+            std::hint::black_box(is_valid_id(i));
+        }
+        dbg!(int_method.elapsed());
+
+        let string_method = std::time::Instant::now();
+        for i in 1..10_000_000 {
+            std::hint::black_box(is_valid_id_s(i));
+        }
+        dbg!(string_method.elapsed());
+    }
+
+    fn is_valid_id_s(id: i64) -> bool {
+        let id = id.to_string();
+        if id.len().is_multiple_of(2) {
+            let (left, right) = id.split_at(id.len() / 2);
+            left != right
+        } else {
+            true
+        }
+    }
+}
