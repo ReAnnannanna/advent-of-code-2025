@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::io::Read as _;
 
 type Bank = Vec<u8>;
@@ -10,12 +11,23 @@ fn parse_input(input: &str) -> Vec<Bank> {
         .collect()
 }
 
+/// Comparator function that ranks the highest, left-most digit as the greatest.
+fn compare(
+    (left_index, left_digit): &(usize, &u8),
+    (right_index, right_digit): &(usize, &u8),
+) -> Ordering {
+    left_digit
+        .cmp(right_digit)
+        .then_with(|| left_index.cmp(right_index).reverse())
+}
+
 fn maximum_bank_joltage(bank: &[u8]) -> u8 {
-    bank.iter()
+    let (index, digit) = bank[..bank.len() - 1]
+        .iter()
         .enumerate()
-        .flat_map(|(index, a)| bank[index + 1..].iter().map(move |b| a * 10 + b))
-        .max()
-        .expect("there is always at least one entry")
+        .max_by(compare)
+        .unwrap();
+    *digit * 10 + *bank[index + 1..].iter().max().unwrap()
 }
 
 fn find_maximum_joltage(input: &str) -> i64 {

@@ -1,4 +1,5 @@
-use std::{cmp::Ordering, io::Read as _};
+use std::cmp::Ordering;
+use std::io::Read as _;
 
 type Bank = Vec<u8>;
 
