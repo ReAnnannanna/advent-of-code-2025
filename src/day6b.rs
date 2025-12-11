@@ -13,7 +13,8 @@ struct Problem {
 }
 
 fn parse_input(input: &str) -> impl Iterator<Item = Problem> {
-    let mut lines = input.lines()
+    let mut lines = input
+        .lines()
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>();
 
@@ -21,7 +22,10 @@ fn parse_input(input: &str) -> impl Iterator<Item = Problem> {
         panic!("invalid input: zero lines");
     };
 
-    let mut number_lines = lines.into_iter().map(|line| line.chars().rev()).collect::<Vec<_>>();
+    let mut number_lines = lines
+        .into_iter()
+        .map(|line| line.chars().rev())
+        .collect::<Vec<_>>();
 
     operations_line
         .split_ascii_whitespace()
@@ -54,7 +58,10 @@ fn parse_input(input: &str) -> impl Iterator<Item = Problem> {
                     break;
                 }
 
-                problem.numbers.push(n.parse().expect("invalid input: not a number on a number row"));
+                problem.numbers.push(
+                    n.parse()
+                        .expect("invalid input: not a number on a number row"),
+                );
                 column.clear();
             }
 
