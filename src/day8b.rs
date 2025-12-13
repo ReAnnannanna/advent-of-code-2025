@@ -57,9 +57,10 @@ fn sorted_combinations(coords: &'_ [Coord]) -> Vec<(&'_ Coord, &'_ Coord, Distan
     combinations
 }
 
-fn build_circuits<'a>(
+fn build_circuit<'a>(
+    num_boxes: usize,
     combinations: impl Iterator<Item = &'a (&'a Coord, &'a Coord, Distance)>,
-) -> Vec<HashSet<&'a Coord>> {
+) -> (&'a Coord, &'a Coord) {
     let mut circuits: Vec<HashSet<&'a Coord>> = vec![];
 
     // Note it doesn't merge circuits once they are connected together.
@@ -87,10 +88,17 @@ fn build_circuits<'a>(
                 circuits.push(HashSet::from([*a, *b]));
             }
         }
+
+        // exit condition: *all* boxes are in a circuit + there is just one circuit.
+
+        if let [circuit] = &circuits[..]
+            && circuit.len() == num_boxes
+        {
+            return (a, b);
+        }
     }
 
-    circuits.sort_by_key(|circuit| circuit.len());
-    circuits
+    unreachable!("");
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -103,14 +111,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let combinations = sorted_combinations(&coords);
 
     // build circuits in that order
-    let circuits = build_circuits(combinations.iter().take(1_000));
+    let final_connection = build_circuit(coords.len(), combinations.iter());
 
-    let result = circuits
-        .iter()
-        .rev()
-        .take(3)
-        .map(|circuit| circuit.len())
-        .product::<usize>();
+    let result = final_connection.0.x * final_connection.1.x;
 
     println!("{result}");
 
@@ -120,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::Coord;
-    use super::build_circuits;
+    use super::build_circuit;
     use super::parse_input;
     use super::sorted_combinations;
 
@@ -256,15 +259,21 @@ mod tests {
 
         let combinations = sorted_combinations(&coords);
 
-        let circuits = build_circuits(combinations.iter().take(10));
+        let final_connection = build_circuit(coords.len(), combinations.iter());
         assert_eq!(
-            circuits
-                .iter()
-                .rev()
-                .take(3)
-                .map(|circuit| circuit.len())
-                .product::<usize>(),
-            40
+            final_connection,
+            (
+                &Coord {
+                    x: 216,
+                    y: 146,
+                    z: 977
+                },
+                &Coord {
+                    x: 117,
+                    y: 168,
+                    z: 530
+                }
+            ),
         );
     }
 }
