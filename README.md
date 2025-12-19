@@ -4,6 +4,8 @@ advent of code 2025, a few days late live on twitch dot tv: <https://twitch.tv/r
 
 i'm doing it in rust!!
 
+fuck 12!
+
 ## License
 
 This is free and unencumbered software released into the public domain.
