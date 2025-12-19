@@ -123,9 +123,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use super::VisitState;
     use super::parse_input;
     use super::traverse_graph;
-    use super::VisitState;
     use std::collections::HashMap;
 
     #[test]

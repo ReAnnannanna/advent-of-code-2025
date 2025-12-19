@@ -79,9 +79,9 @@ path = "src/day9b.rs"
 name = "day10"
 path = "src/day10.rs"
 
-# [[bin]]
-# name = "day10b"
-# path = "src/day10b.rs"
+[[bin]]
+name = "day10b"
+path = "src/day10b.rs"
 
 [[bin]]
 name = "day11"
@@ -90,3 +90,7 @@ path = "src/day11.rs"
 [[bin]]
 name = "day11b"
 path = "src/day11b.rs"
+
+[dependencies]
+rayon = "1.11.0"
+z3 = { version = "0.19.6", features = ["bundled"] }
