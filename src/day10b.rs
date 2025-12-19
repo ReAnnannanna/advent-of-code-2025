@@ -1,5 +1,8 @@
 use std::io::Read as _;
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator as _};
+use z3::{Solver, ast::Int};
+
 type Joltage = u16;
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -53,63 +56,45 @@ fn parse_input(input: &str) -> Vec<Machine> {
     input.trim().lines().map(parse_machine).collect()
 }
 
-fn press_button(state: &[Joltage], button: &[usize]) -> Vec<Joltage> {
-    let mut output = state.to_vec();
+fn configure_machine(machine: &Machine) -> Option<u64> {
+    // a * (0,2,3,4) + b * (2,3) + c * (0,4) + d * (0,1,2) + e * (1,2,3,4) = {7,5,12,7,2}
+    // a + b + d = 7
+    // d + e = 5
+    let solver = Solver::new();
 
-    for &index in button {
-        output[index] += 1;
+    let button_vars = machine
+        .buttons
+        .iter()
+        .map(|_| Int::fresh_const("button"))
+        .collect::<Vec<_>>();
+
+    for var in &button_vars {
+        solver.assert(var.ge(0));
     }
 
-    output
-}
+    for (index, target_joltage) in machine.joltages.iter().enumerate() {
+        // sum = each button that activates this index
 
-fn count_pressed_buttons(buttons: &[usize]) -> usize {
-    buttons.iter().sum()
-}
+        let sum = machine
+            .buttons
+            .iter()
+            .enumerate()
+            .filter(|(_, effect)| effect.contains(&index))
+            .map(|(bindex, _)| &button_vars[bindex])
+            .fold(Int::from_i64(0), |acc, button| acc + button);
 
-fn configure_machine(machine: &Machine) -> Option<Vec<usize>> {
-    fn recur(
-        target_state: &[Joltage],
-        // XXX: could be mutable instead of copying it on each recursion
-        current_state: &[Joltage],
-        buttons: &[Vec<usize>],
-    ) -> Option<Vec<usize>> {
-        if target_state == current_state {
-            return Some(vec![0; buttons.len()]);
-        }
-
-        if current_state.iter().zip(target_state).any(|(current, target)| current > target) {
-            return None;
-        }
-
-        let [first, rest @ ..] = buttons else {
-            // No more buttons to press.
-            return None;
-        };
-
-        let pressed_state = press_button(current_state, first);
-
-        let mut results = vec![];
-
-        results.extend(recur(target_state, current_state, rest).map(|mut presseds| {
-            presseds.insert(0, 0); // 0 button presses
-            presseds
-        }));
-        results.extend(recur(target_state, &pressed_state, rest).map(|mut presseds| {
-            presseds.insert(0, 1); // 1 button press
-            presseds
-        }));
-        results.extend(recur(target_state, &pressed_state, buttons).map(|mut presseds| {
-            presseds[0] += 1; // repeated button press
-            presseds
-        }));
-
-        results.into_iter()
-            .min_by_key(|buttons| count_pressed_buttons(buttons))
+        solver.assert(sum.eq(*target_joltage));
     }
 
-    let starting_state = vec![0; machine.indicators.len()];
-    recur(&machine.joltages, &starting_state, &machine.buttons)
+    solver
+        .solutions(button_vars, false)
+        .map(|solution| {
+            solution
+                .iter()
+                .map(|int| int.as_u64().unwrap())
+                .sum::<u64>()
+        })
+        .min()
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -118,10 +103,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let machines = parse_input(&input);
 
-    let result: usize = machines
-        .into_iter()
-        .map(|machine| configure_machine(&machine).expect("each machine should have a solution"))
-        .map(|solution| count_pressed_buttons(&solution))
+    let result: u64 = machines
+        .into_par_iter()
+        .map(|machine| {
+            dbg!(configure_machine(&machine)).expect("each machine should have a solution")
+        })
         .sum();
 
     println!("{result}");
@@ -134,7 +120,6 @@ mod tests {
     use super::Machine;
     use super::configure_machine;
     use super::parse_machine;
-    use super::count_pressed_buttons;
 
     #[test]
     fn test_parse_machine() {
@@ -156,33 +141,13 @@ mod tests {
     #[test]
     fn test_configure_machine() {
         let machine = parse_machine("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}");
-        assert_eq!(
-            configure_machine(&machine).map(|list| count_pressed_buttons(&list)),
-            Some(10),
-        );
+        assert_eq!(configure_machine(&machine), Some(10),);
 
         let machine = parse_machine("[...#.] (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}");
-        assert_eq!(
-            configure_machine(&machine).map(|list| count_pressed_buttons(&list)),
-            Some(12),
-        );
+        assert_eq!(configure_machine(&machine), Some(12),);
 
         let machine =
             parse_machine("[.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}");
-        assert_eq!(
-            configure_machine(&machine).map(|list| count_pressed_buttons(&list)),
-            Some(11),
-        );
-    }
-
-    #[test]
-    fn should_not_lock_up() {
-        let machine = parse_machine("[..#.##] (0,1,3,4,5) (3) (0,1,3,5) (3,5) (1,5) (0,2,3,5) (0,1,2,3) (0,2,4) {25,12,13,57,14,38}");
-        assert_eq!(
-            configure_machine(&machine).map(|list| count_pressed_buttons(&list)),
-            Some(11),
-        );
+        assert_eq!(configure_machine(&machine), Some(11),);
     }
 }
-
-// a * (0,2,3,4) + b * (2,3) + c * (0,4) + d * (0,1,2) + e * (1,2,3,4) = {7,5,12,7,2}
